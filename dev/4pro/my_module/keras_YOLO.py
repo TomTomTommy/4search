@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Class definition of YOLO_v3 style detection model on image and video
-"""
-
 import colorsys
 import os
+import cv2
 from timeit import default_timer as timer
 
 import numpy as np
@@ -15,12 +11,14 @@ from PIL import Image, ImageFont, ImageDraw
 
 from yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 from yolo3.utils import letterbox_image
+import os
 from keras.utils import multi_gpu_model
 
-class YOLO(object):
+class YOLO:
+
     _defaults = {
-        "model_path": 'model_data/yolo.h5',
-        "anchors_path": 'model_data/yolo_anchors.txt',
+        "model_path": 'model_data/yolo-tiny.h5',
+        "anchors_path": 'model_data/tiny_yolo_anchors.txt',
         "classes_path": 'model_data/coco_classes.txt',
         "score" : 0.3,
         "iou" : 0.45,
@@ -42,6 +40,7 @@ class YOLO(object):
         self.anchors = self._get_anchors()
         self.sess = K.get_session()
         self.boxes, self.scores, self.classes = self.generate()
+        print("動いた")
 
     def _get_class(self):
         classes_path = os.path.expanduser(self.classes_path)
@@ -100,6 +99,7 @@ class YOLO(object):
 
     def detect_image(self, image):
         start = timer()
+        results = list()
 
         if self.model_image_size != (None, None):
             assert self.model_image_size[0]%32 == 0, 'Multiples of 32 required'
@@ -135,6 +135,7 @@ class YOLO(object):
             score = out_scores[i]
 
             label = '{} {:.2f}'.format(predicted_class, score)
+            label_name = predicted_class
             draw = ImageDraw.Draw(image)
             label_size = draw.textsize(label, font)
 
@@ -145,7 +146,9 @@ class YOLO(object):
             right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
             width = right - left
             height = bottom - top
-            print(label, (left, top), (right, bottom), '({} × {})'.format(height, width)))
+            x = [label_name, left, top, right, bottom]
+            results.append(x)
+            print(label, (left, top), (right, bottom), '({} × {})'.format(height, width))
 
             if top - label_size[1] >= 0:
                 text_origin = np.array([left, top - label_size[1]])
@@ -165,67 +168,11 @@ class YOLO(object):
 
         end = timer()
         print(end - start)
-        return image
+        return results
 
     def close_session(self):
         self.sess.close()
 
-def detect_video(yolo, video_path, output_path=""):
-    import cv2
-    vid = cv2.VideoCapture(video_path)
-    if not vid.isOpened():
-        raise IOError("Couldn't open webcam or video")
-    video_FourCC    = int(vid.get(cv2.CAP_PROP_FOURCC))
-    video_fps       = vid.get(cv2.CAP_PROP_FPS)
-    video_size      = (int(vid.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                        int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-    isOutput = True if output_path != "" else False
-    if isOutput:
-        print("!!! TYPE:", type(output_path), type(video_FourCC), type(video_fps), type(video_size))
-        out = cv2.VideoWriter(output_path, video_FourCC, video_fps, video_size)
-    accum_time = 0
-    curr_fps = 0
-    fps = "FPS: ??"
-    prev_time = timer()
-    while True:
-        return_value, frame = vid.read()
-        image = Image.fromarray(frame)
-        image = yolo.detect_image(image)
-        result = np.asarray(image)
-        curr_time = timer()
-        exec_time = curr_time - prev_time
-        prev_time = curr_time
-        accum_time = accum_time + exec_time
-        curr_fps = curr_fps + 1
-        if accum_time > 1:
-            accum_time = accum_time - 1
-            fps = "FPS: " + str(curr_fps)
-            curr_fps = 0
-        cv2.putText(result, text=fps, org=(3, 15), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=0.50, color=(255, 0, 0), thickness=2)
-        cv2.namedWindow("result", cv2.WINDOW_NORMAL)
-        cv2.imshow("result", result)
-        if isOutput:
-            out.write(result)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    yolo.close_session()
-
-def detect_img(yolo):
-    while True:
-        img = input('Input image filename:')
-        try:
-            image = Image.open(img)
-        except:
-            print('Open Error! Try again!')
-            continue
-        else:
-            r_image = yolo.detect_image(image)
-            print(type(r_image))
-            import cv2
-            cv2.imwrite("out.jpg", np.asarray(r_image)[..., ::-1])
-            r_image.show()
-    yolo.close_session()
-
-if __name__ == '__main__':
-    detect_img(YOLO())
+    # 渡された画像からオブジェクトを探索し、認識したラベルとその位置・大きさを返す
+    def get_objs(self, img):
+        return self.detect_image(img)
