@@ -18,13 +18,6 @@ from yolo3.utils import letterbox_image
 import os
 from keras.utils import multi_gpu_model
 
-import numpy as np
-from keras.applications.vgg16 import VGG16, preprocess_input, decode_predictions
-from keras.preprocessing import image
-from keras.models import Model
-
-import cv2
-
 class YOLO(object):
     _defaults = {
         "model_path": 'model_data/yolo.h5',
@@ -108,7 +101,6 @@ class YOLO(object):
 
     def detect_image(self, image):
         start = timer()
-        results = list()
 
         if self.model_image_size != (None, None):
             assert self.model_image_size[0]%32 == 0, 'Multiples of 32 required'
@@ -144,7 +136,6 @@ class YOLO(object):
             score = out_scores[i]
 
             label = '{} {:.2f}'.format(predicted_class, score)
-            label_name = predicted_class
             draw = ImageDraw.Draw(image)
             label_size = draw.textsize(label, font)
 
@@ -155,9 +146,7 @@ class YOLO(object):
             right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
             width = right - left
             height = bottom - top
-            x = [label_name, left, top, right, bottom]
-            results.append(x)
-            print(label, (left, top), (right, bottom), '({} × {})'.format(height, width))
+            print(label, (left, top), (right, bottom), '({} × {})'.format(height, width)))
 
             if top - label_size[1] >= 0:
                 text_origin = np.array([left, top - label_size[1]])
@@ -177,7 +166,7 @@ class YOLO(object):
 
         end = timer()
         print(end - start)
-        return image, results
+        return image
 
     def close_session(self):
         self.sess.close()
@@ -223,37 +212,21 @@ def detect_video(yolo, video_path, output_path=""):
             break
     yolo.close_session()
 
-def detect_img(yolo, img):
-    results = yolo.detect_image(img)
-    r_image = results[0]
-    cv2.imwrite("out.jpg", np.asarray(r_image)[..., ::-1])
-    r_image.show()
-    return results[1]
+def detect_img(yolo):
+    while True:
+        img = input('Input image filename:')
+        try:
+            image = Image.open(img)
+        except:
+            print('Open Error! Try again!')
+            continue
+        else:
+            r_image = yolo.detect_image(image)
+            print(type(r_image))
+            import cv2
+            cv2.imwrite("out.jpg", np.asarray(r_image)[..., ::-1])
+            r_image.show()
     yolo.close_session()
 
 if __name__ == '__main__':
-    model = VGG16()
-    model.summary()
-    intermediante_layer_model = Model(inputs=model.input, outputs=model.get_layer("block5_pool").output)
-
-    img_path = input('Input image filename:')
-    try:
-        pre_img = Image.open(img_path)
-        img = Image.open(img_path)
-    except:
-        print('Open Error!')
-    else:
-        imgs =  detect_img(YOLO(), img)
-        img1 = pre_img.crop((imgs[0][1], imgs[0][2], imgs[0][3], imgs[0][4]))
-        img1.save('test.jpg', quality=95)
-        img1 = img1.resize(model.input_shape[1:3])
-
-        x = image.img_to_array(img1)
-        x = np.expand_dims(x, axis=0)
-        x = preprocess_input(x)
-        preds_x = model.predict(x)
-        result_x = decode_predictions(preds_x, top=3)[0]
-        print(result_x)
-
-        for _, name, score in result_x:
-            print('{}: {:.2%}'.format(name, score))
+    detect_img(YOLO())
