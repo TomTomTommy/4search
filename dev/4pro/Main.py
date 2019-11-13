@@ -14,6 +14,21 @@ ft = FineTuning.FT();
 
 def main():
 
+    img_path = input('Input image filename:')
+    try:
+        pre_img = Image.open(img_path)
+        img = Image.open(img_path)
+    except:
+        print('Open Error!')
+    else:
+        obj_results = yolo.get_objs(img)
+        for obj in obj_results:
+            img = img.crop((obj[1], obj[2], obj[3], obj[4]))
+            feature = ft.get_feature(img)
+            ft.feature_print(feature)
+
+def camera_main():
+
     # 映像の設定　
     vid = cv2.VideoCapture(input_path)
     if not vid.isOpened():
