@@ -14,21 +14,6 @@ ft = FineTuning.FT();
 
 def main():
 
-    img_path = input('Input image filename:')
-    try:
-        pre_img = Image.open(img_path)
-        img = Image.open(img_path)
-    except:
-        print('Open Error!')
-    else:
-        obj_results = yolo.get_objs(img)
-        for obj in obj_results:
-            img = img.crop((obj[1], obj[2], obj[3], obj[4]))
-            feature = ft.get_feature(img)
-            ft.feature_print(feature)
-
-def camera_main():
-
     # 映像の設定　
     vid = cv2.VideoCapture(input_path)
     if not vid.isOpened():
@@ -85,9 +70,8 @@ def camera_main():
         if stop_key == 32:
             obj_results = yolo.get_objs(image)
             for obj in obj_results:
-                img = pre_img.crop((obj[0][1], obj[0][2], obj[0][3], obj[0][4]))
+                img = image.crop((obj[1], obj[2], obj[3], obj[4]))
                 feature = ft.get_feature(img)
-
 
         # エスケープキーが押されたらカメラを止める
         if stop_key == 27:
