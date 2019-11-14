@@ -28,6 +28,13 @@ class FT:
         preds_x = self.model.predict(x)  #推論を行う
         return preds_x
 
+    def feature_print(self, preds_x):
+        print('特徴量のサイズ : {}'. format(preds_x.shape))
+        result_x = decode_predictions(preds_x, top=3)[0]
+        for _, name, score in result_x:
+            print('{}: {:.2%}'.format(name, score))
+
+
 '''
 # 特徴量の出力
 # 中間層ver
