@@ -26,8 +26,9 @@ def main():
         for obj in obj_results:
             print('======{}枚目======'.format(i))
             img = img.crop((obj[1], obj[2], obj[3], obj[4]))
-            feature = ft.get_feature(img)
-            ft.feature_print(feature)
+            set_img =  ft.prepro_img(img)
+            feature = ft.get_layer_output(set_img, 3)
+            '''ft.feature_print(feature)'''
             i = i+1
 
 def camera_main():
